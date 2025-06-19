@@ -19,17 +19,17 @@ which is cumbersome to me here you can do just laucher search "LGTV" and its don
  ## How to Eexecute
 
  - compile launcher.cpp to launcher.exe  
- - then to run launcher.exe open vscode 
+ - then to run "launcher.exe open vscode'
    //opens vs code only if path given in app.json
- - or launcher.exe opens https://github.com 
- - or launcher.exe search "how to write" 
-//this will searche the web for query in default browser 
+ - or 'launcher.exe open https://github.com'
+ - or 'launcher.exe search "how to write" '
+//this will searche the web for "query" in default browser 
  - to search the query in specific browser use -engine keyword 
-   launcher.exe search "how to write" -engine  github 
+   "launcher.exe search "how to write" -engine  github"
 //searches on github can choose engine from search_engines.json or add new one
- - launcher.exe find document.pdf //searches file/folders and returns address
- - luncher.exe find -o doc.txt //opens file/folders at location
- - force testing also possible by running powershell -ExecutionPolicy Bypass -File ./scripts/win/core.ps1 Search "vscode"
+ - 'launcher.exe find document.pdf'//searches file/folders and returns address
+ - 'luncher.exe find -o doc.txt'//opens file/folders at location
+ - force testing also possible by running 'powershell -ExecutionPolicy Bypass -File ./scripts/win/core.ps1 search "vscode"'
  - replace search with any other option like find open etc
 
 ***CODE ONLY PROVIDED FOR WINDOWS MACHINE***
@@ -40,7 +40,7 @@ which is cumbersome to me here you can do just laucher search "LGTV" and its don
  - test the add_app.sh and core.sh 
  - modify the launcher.cpp to handle .sh 
  - add support of mac and linux systems 
- - suggest changes in code structure to make ut more optimise
+ - suggest changes in code structure to make it more optimise
  - Suggest any new fun commands to add to project 
 
 
