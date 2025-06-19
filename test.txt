@@ -1,4 +1,11 @@
- # Testing
+# What is this project?
+ - a simple way to do commands on  Powershell 
+- like to open a website you have do start chrome "https://google.com"
+which is cumbersome to me here you can do just laucher search "LGTV" and its done 
+- so basically i want design a system that wraps over existing commands and make it user acceable using script and little bit of cpp
+- for now it has only 3 function find search and open 
+
+# Testing
  
  - to test simplly clone the repo then add details to apps.json
  - apps.json is a file which contains names of applications and
