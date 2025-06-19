@@ -6,22 +6,28 @@ $searchConfigPath = Join-Path $PSScriptRoot "../../config/search_engines.json"
 $searchConfig = Get-Content $searchConfigPath | ConvertFrom-Json
 
 function Invoke-Open {
+    Write-Host "starting"
     param(
-        [string]$target
-    )
+        [string]$target)
     
     if ($appsConfig.PSObject.Properties.Name -contains $target) {
         Start-Process $appsConfig.$target
+        Write-Host "Opening $target"
+
     }
     elseif (Test-Path $target) {
         Start-Process $target
+        Write-Host "Opening $target"
     }
     elseif ($target -match "^https?://") {
         Start-Process $target
+        Write-Host "Opening $target"
+
     }
     else {
         Write-Host "Application or target not found: $target"
     }
+    Write-Host "ended process"
 }
 
 function Invoke-Search {
@@ -60,5 +66,26 @@ function Invoke-Find {
     }
 }
 
-# Export functions for the main launcher
-Export-ModuleMember -Function Invoke-Open, Invoke-Search, Invoke-Find
+
+# ...existing code...
+
+# Dispatcher for command-line arguments
+if ($args.Count -gt 0) {
+    $command = $args[0]
+    $commandArgs = $args[1..($args.Count - 1)]
+
+    switch ($command.ToLower()) {
+        "open"   { Invoke-Open @commandArgs }
+        "search" { Invoke-Search @commandArgs }
+        "find"   { Invoke-Find @commandArgs }
+        default  { Write-Host "Unknown command: $command" }
+    }
+} else {
+    Write-Host "No command provided."
+}
+
+# When you run a .ps1 script with -File, PowerShell does not automatically call any functions defined in the script. It just loads and runs the top-level code.
+# Your functions are defined, but never invoked unless you explicitly call them in the script body.
+
+
+

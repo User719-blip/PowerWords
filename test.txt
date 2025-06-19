@@ -1,0 +1,37 @@
+ # Testing
+ 
+ - to test simplly clone the repo then add details to apps.json
+ - apps.json is a file which contains names of applications and
+   location of there exe file 
+ - to add new entries to the app.json run add_ap.sh or add_app.ps1
+                                or
+   windows .\add_app.ps1 -name "notepad" -path "C:\Windows\System32\notepad.exe"
+   mac/linux ./add_app.sh notepad /usr/bin/open -a TextEdit
+                     
+ ## How to Exexute
+
+ - then compile launcher.cpp to launcher.exe  
+ - then to run launcher.exe open vscode 
+   //opens vs code only if path given in app.json
+ - or launcher.exe opens https://github.com 
+ - or launcher.exe search "how to write" 
+//this will searche the web for query in default browser 
+ - to search the query in specific browser use -engine keyword 
+   launcher.exe search "how to write" -engine  github 
+//searches on github can choose engine from search_engines.json or add new one
+ - launcher.exe find document.pdf //searches file/folders and returns address
+ - luncher.exe find -o doc.txt //opens file/folders at location
+
+***CODE ONLY PROVIDED FOR WINDOWS MACHINE***
+
+ ## Help Wanted 
+     
+ - write inno set up to create an installer
+ - test the add_app.sh and core.sh 
+ - modify the launcher.cpp to handle .sh 
+ - add support of mac and linux systems 
+ - suggest changes in code structure to make ut more optimise
+ - Suggest any new fun commands to add to project 
+
+
+

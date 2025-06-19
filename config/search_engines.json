@@ -1,0 +1,6 @@
+{
+    "default": "https://www.google.com/search?q={query}",
+    "google": "https://www.google.com/search?q={query}",
+    "github": "https://github.com/search?q={query}",
+    "ddg": "https://duckduckgo.com/?q={query}"
+}
