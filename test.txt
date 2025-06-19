@@ -2,15 +2,16 @@
  
  - to test simplly clone the repo then add details to apps.json
  - apps.json is a file which contains names of applications and
-   location of there exe file 
- - to add new entries to the app.json run add_ap.sh or add_app.ps1
+   location of there exe file. vscode is allready added and should
+   work every where (vscode : code)
+ - to add new entries to the app.json run add_ap.sh(untested) or add_app.ps1
                                 or
    windows .\add_app.ps1 -name "notepad" -path "C:\Windows\System32\notepad.exe"
-   mac/linux ./add_app.sh notepad /usr/bin/open -a TextEdit
+   mac/linux ./add_app.sh notepad /usr/bin/open -a TextEdit (untested may throw error)
                      
- ## How to Exexute
+ ## How to Eexecute
 
- - then compile launcher.cpp to launcher.exe  
+ - compile launcher.cpp to launcher.exe  
  - then to run launcher.exe open vscode 
    //opens vs code only if path given in app.json
  - or launcher.exe opens https://github.com 
@@ -21,6 +22,8 @@
 //searches on github can choose engine from search_engines.json or add new one
  - launcher.exe find document.pdf //searches file/folders and returns address
  - luncher.exe find -o doc.txt //opens file/folders at location
+ - force testing also possible by running powershell -ExecutionPolicy Bypass -File ./scripts/win/core.ps1 Search "vscode"
+ - replace search with any other option like find open etc
 
 ***CODE ONLY PROVIDED FOR WINDOWS MACHINE***
 
