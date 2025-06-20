@@ -5,6 +5,45 @@ $appsConfig = Get-Content $configPath | ConvertFrom-Json
 $searchConfigPath = Join-Path $PSScriptRoot "../../config/search_engines.json"
 $searchConfig = Get-Content $searchConfigPath | ConvertFrom-Json
 
+function Check-ForUpdates {
+    $currentVersion = "1.0.0"  # Update this with each release
+    $repo = "User719-blip/PowerWords"  # e.g., "JohnDoe/MyLauncher"
+
+    try {
+        # Get latest release info from GitHub API
+        $latestRelease = (Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/latest" -UseBasicParsing)
+        $latestVersion = $latestRelease.tag_name -replace "v", ""  # Remove 'v' from v1.0.0
+
+        if ([version]$latestVersion -gt [version]$currentVersion) {
+            Write-Host "🚀 Update available: $latestVersion (Current: $currentVersion)"
+            
+            # Ask user if they want to update
+            $choice = Read-Host "Do you want to update now? (Y/N)"
+            if ($choice -eq 'Y') {
+                # Find the installer download URL
+                $asset = $latestRelease.assets | Where-Object { $_.name -like "*Setup*.exe" }
+                $downloadUrl = $asset.browser_download_url
+
+                # Download and run the installer silently
+                $tempInstaller = "$env:TEMP\MyLauncherUpdate.exe"
+                Invoke-WebRequest -Uri $downloadUrl -OutFile $tempInstaller -UseBasicParsing
+                Start-Process -FilePath $tempInstaller -ArgumentList "/VERYSILENT" -Wait
+
+                Write-Host "✅ Update installed! Restart the launcher."
+                exit
+            }
+        }
+    }
+    catch {
+        Write-Host "⚠️ Could not check for updates: $_" -ForegroundColor Yellow
+    }
+}
+
+# Call this at startup
+Check-ForUpdates
+
+
+
 function Invoke-Open {
     Write-Host "starting"
     param(
