@@ -3,25 +3,22 @@
 #include <windows.h>
 
 // Forward declaration
-std::string getInstallPath();
+
+#include <sstream>
+// ...existing code...
+std::string getInstallPath() {
+    char path[MAX_PATH];
+    GetModuleFileNameA(NULL, path, MAX_PATH);
+    std::string fullPath(path);
+    size_t pos = fullPath.find_last_of("\\/");
+    return (pos == std::string::npos) ? fullPath : fullPath.substr(0, pos);
+}
 void executeCommand(const std::string &command)
 {
-    std::string fullCommand = "powershell -ExecutionPolicy Bypass -File \"" +
-        getInstallPath() + "\\..\\scripts\\win\\core.ps1\" " + command + "\"";
+    std::string scriptPath = getInstallPath() + "\\..\\scripts\\win\\core.ps1";
+    // Quote the script path
+    std::string fullCommand = "powershell -ExecutionPolicy Bypass -File \"" + scriptPath + "\" " + command;
     system(fullCommand.c_str());
-}
-
-std::string getInstallPath()
-{
-    wchar_t path[MAX_PATH];
-    GetModuleFileNameW(NULL, path, MAX_PATH);
-    std::wstring wpath(path);
-    std::wstring::size_type pos = wpath.find_last_of(L"\\/");
-    std::wstring wdir = wpath.substr(0, pos);
-    int size_needed = WideCharToMultiByte(CP_UTF8, 0, wdir.c_str(), (int)wdir.size(), NULL, 0, NULL, NULL);
-    std::string dir(size_needed, 0);
-    WideCharToMultiByte(CP_UTF8, 0, wdir.c_str(), (int)wdir.size(), &dir[0], size_needed, NULL, NULL);
-    return dir;
 }
 
 int main(int argc, char *argv[])
@@ -32,14 +29,19 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    std::string command;
+    std::ostringstream command;
     for (int i = 1; i < argc; ++i)
     {
-        command += argv[i];
+        // Quote each argument if it contains spaces
+        std::string arg = argv[i];
+        if (arg.find(' ') != std::string::npos)
+            command << "\"" << arg << "\"";
+        else
+            command << arg;
         if (i < argc - 1)
-            command += " ";
+            command << " ";
     }
 
-    executeCommand(command);
+    executeCommand(command.str());
     return 0;
 }
