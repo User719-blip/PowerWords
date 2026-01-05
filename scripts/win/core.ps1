@@ -4,24 +4,51 @@ $appsConfig = Get-Content $configPath | ConvertFrom-Json
 
 $searchConfigPath = Join-Path $PSScriptRoot "../../config/search_engines.json"
 $searchConfig = Get-Content $searchConfigPath | ConvertFrom-Json
-Start-Process powershell.exe -NoNewWindow -Wait{
-    (Get-Host).UI.RawUI.BackgroundColor = 'Black'
-    (Get-Host).UI.RawUI.ForegroundColor = 'White'
-
+function Invoke-gui{
+    
+}
+function Invoke-help{
+    Write-Host "Available commands:"
+    Write-Host "  open <app_name|path|url>     - Open an application, file, or URL."
+    Write-Host "  search <query> [engine]      - Search the web using the specified engine."
+    Write-Host "  find <pattern> [-open]       - Find files matching the pattern. Use -open to open the first match."
+    Write-Host "  sys-status                   - Display system status information."
+    Write-Host "  git-sync <commit_message>    - Sync local changes to the Git repository with the provided commit message."
+    Write-Host "  help                         - Show this help message."
 }
 
 function Test-ForUpdates {
-    $currentVersion = "1.0.0"  # Update this with each release
-    $repo = "User719-blip/PowerWords"  # e.g., "JohnDoe/MyLauncher"
+    [CmdletBinding()]
+    param()
+    $currentVersion = "1.0.0"
+    $repo = "User719-blip/PowerWords"
 
     try {
         # Get latest release info from GitHub API
-        $latestRelease = (Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/latest" -UseBasicParsing)
-        $latestVersion = $latestRelease.tag_name -replace "v", ""  # Remove 'v' from v1.0.0
+        $latestRelease = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/latest" -UseBasicParsing -Headers @{ 'User-Agent' = 'PowerWords-Updater' }
+        $rawTag = $latestRelease.tag_name
 
-        if ([version]$latestVersion -gt [version]$currentVersion) {
-            Write-Host "🚀 Update available: $latestVersion (Current: $currentVersion)"
-            
+        if ([string]::IsNullOrWhiteSpace($rawTag)) {
+            Write-Verbose "Update check skipped: latest release has no tag."
+            return
+        }
+
+        $normalizedTag = $rawTag -replace "^v", ""
+        $parsedLatest = $null
+        if (-not [System.Version]::TryParse($normalizedTag, [ref]$parsedLatest)) {
+            Write-Verbose "Update check skipped: invalid version tag '$rawTag'."
+            return
+        }
+
+        $parsedCurrent = $null
+        if (-not [System.Version]::TryParse($currentVersion, [ref]$parsedCurrent)) {
+            Write-Verbose "Update check skipped: invalid current version '$currentVersion'."
+            return
+        }
+
+        if ($parsedLatest -gt $parsedCurrent) {
+            Write-Host "Update available: $normalizedTag (Current: $parsedCurrent)"
+
             # Ask user if they want to update
             $choice = Read-Host "Do you want to update now? (Y/N)"
             if ($choice -eq 'Y') {
@@ -29,18 +56,23 @@ function Test-ForUpdates {
                 $asset = $latestRelease.assets | Where-Object { $_.name -like "*Setup*.exe" }
                 $downloadUrl = $asset.browser_download_url
 
-                # Download and run the installer silently
-                $tempInstaller = "$env:TEMP\MyLauncherUpdate.exe"
-                Invoke-WebRequest -Uri $downloadUrl -OutFile $tempInstaller -UseBasicParsing
-                Start-Process -FilePath $tempInstaller -ArgumentList "/VERYSILENT" -Wait
+                if (-not [string]::IsNullOrWhiteSpace($downloadUrl)) {
+                    # Download and run the installer silently
+                    $tempInstaller = "$env:TEMP\MyLauncherUpdate.exe"
+                    Invoke-WebRequest -Uri $downloadUrl -OutFile $tempInstaller -UseBasicParsing
+                    Start-Process -FilePath $tempInstaller -ArgumentList "/VERYSILENT" -Wait
 
-                Write-Host "✅ Update installed! Restart the launcher."
-                exit
+                    Write-Host "Update installed! Restart the launcher."
+                    exit
+                }
+                else {
+                    Write-Verbose "Update asset not found; please check the release manually."
+                }
             }
         }
     }
     catch {
-        Write-Host "⚠️ Could not check for updates: $_" -ForegroundColor Yellow
+        Write-Host "Could not check for updates: $($_.Exception.Message)" -ForegroundColor Yellow
     }
 }
 
@@ -49,7 +81,6 @@ Test-ForUpdates
 
 
 function Invoke-Open {
-    Write-Host "starting"
     param(
         [string]$target)
     
@@ -137,25 +168,102 @@ function Invoke-GitSync {
     Write-Host "----------------"
 }
 
-# Modify the existing command dispatcher 'switch' statement:
-# ... (existing code) ...
 
 # Dispatcher for command-line arguments
 
 
 function Invoke-Search {
+    [CmdletBinding()]
     param(
-        [string]$query,
-        [string]$engine = "default"
+        [Parameter(ValueFromRemainingArguments = $true)]
+        [string[]]$arguments
     )
-    
+
+    $here = $false
+    $engine = "default"
+    $queryParts = New-Object System.Collections.Generic.List[string]
+
+    foreach ($arg in $arguments) {
+        if ($arg -eq "--here") {
+            $here = $true
+            continue
+        }
+
+        if ($arg -like "--engine=*") {
+            $engine = $arg.Substring(9)
+            continue
+        }
+
+        $queryParts.Add($arg)
+    }
+
+    if ($queryParts.Count -eq 0) {
+        Write-Host "Usage: search [--here] <query> [engine]"
+        return
+    }
+
+    if (-not $here -and $queryParts.Count -gt 1) {
+        $candidateEngine = $queryParts[-1]
+        if ($searchConfig.PSObject.Properties.Name -contains $candidateEngine) {
+            $engine = $candidateEngine
+            [void]$queryParts.RemoveAt($queryParts.Count - 1)
+        }
+    }
+
+    $query = [string]::Join(" ", $queryParts)
+
+    if ($here) {
+        
+        try {
+            $encodedQuery = [Uri]::EscapeDataString($query)
+            $apiUrl = "https://api.duckduckgo.com/?q=$encodedQuery&format=json&no_redirect=1&no_html=1"
+            $response = Invoke-RestMethod -Uri $apiUrl -UseBasicParsing
+
+            $summary = $null
+            if (-not [string]::IsNullOrWhiteSpace($response.AbstractText)) {
+                $summary = $response.AbstractText
+            }
+            elseif ($response.RelatedTopics -and $response.RelatedTopics[0].Text) {
+                $summary = $response.RelatedTopics[0].Text
+            }
+
+            if ([string]::IsNullOrWhiteSpace($summary)) {
+                Write-Host "No inline summary found for '$query'. Opening browser instead."
+                $template = if ($searchConfig.PSObject.Properties.Name -contains $engine) {
+                    $searchConfig.$engine
+                } else {
+                    $searchConfig.default
+                }
+                Start-Process ($template -replace "{query}", $encodedQuery)
+                return
+            }
+
+            $words = $summary -split '\s+'
+            if ($words.Count -gt 60) {
+                $summary = ($words[0..59] -join ' ') + '...'
+            } else {
+                $summary = $words -join ' '
+            }
+
+            Write-Host "Query: $query"
+            foreach ($line in ($summary -split '(.{1,90})(?:\s+|$)' | Where-Object { $_ })) {
+                Write-Host $line.Trim()
+            }
+        }
+        catch {
+            Write-Host "Inline lookup failed: $($_.Exception.Message)."
+        }
+        return
+    }
+
     if ($searchConfig.PSObject.Properties.Name -contains $engine) {
-        $url = $searchConfig.$engine -replace "{query}", [Uri]::EscapeDataString($query)
-        Start-Process $url
-    }
-    else {
+        $template = $searchConfig.$engine
+    } else {
         Write-Host "Search engine not found: $engine"
+        return
     }
+
+    Start-Process ($template -replace "{query}", [Uri]::EscapeDataString($query))
 }
 
 function Invoke-Find {
@@ -179,27 +287,54 @@ function Invoke-Find {
     }
 }
 
+function Invoke-Path {
+    param(
+        [string]$targetPath = (Get-Location).Path
+    )
 
-# ...existing code...
+    if (-not (Test-Path $targetPath)) {
+        Write-Host "Path not found: $targetPath"
+        return
+    }
+
+    $scriptsDir = Split-Path $PSScriptRoot -Parent
+    $projectRoot = Split-Path $scriptsDir -Parent
+    $launcherCandidates = @(
+        Join-Path $projectRoot "launcher.exe",
+        Join-Path $projectRoot "bin\launcher.exe"
+    )
+
+    $launcherExe = $launcherCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+    if ($launcherExe) {
+        & $launcherExe "list" $targetPath
+    }
+    else {
+        Get-ChildItem -Path $targetPath -Directory | ForEach-Object { $_.FullName }
+    }
+}
+
+
 
 # Dispatcher for command-line arguments
 
 if ($args.Count -gt 0) {
     $command = $args[0]
-    $commandArgs = $args[1..($args.Count - 1)]
+    $commandArgs = if ($args.Count -gt 1) { $args[1..($args.Count - 1)] } else { @() }
 
-     Write-Host "Hello, world!" # This
     switch ($command.ToLower()) {
         
+        "help"      { Invoke-help }
         "open"      { Invoke-Open @commandArgs }
         "search"    { Invoke-Search @commandArgs }
         "find"      { Invoke-Find @commandArgs }
-        "sys-status" { Invoke-SysStatus } # Add this line
-        "git-sync"  { Invoke-GitSync @commandArgs } # Add this line
+        "sys-status" { Invoke-SysStatus }
+        "git-sync"  { Invoke-GitSync @commandArgs }
+        "path"      { Invoke-Path @commandArgs }
         default     { Write-Host "Unknown command: $command" }
     }
 } else {
     Write-Host "No command provided."
 }
 # When you run a .ps1 script with -File, PowerShell does not automatically call any functions defined in the script. It just loads and runs the top-level code.
-# Your functions are defined, but never invoked unless you explicitly call them in the script body.
+# Your functions are defined, but never invoked unless you explicitly call them in the script body
